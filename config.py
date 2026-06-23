@@ -1,3 +1,4 @@
+
 # config.py enthält alle wichtigen Einstellwerte.
 
 
@@ -48,14 +49,13 @@ LINE_TURN_RATE = 45
 
 
 # Gelb-Spezial-Aktion
-# 360 + 360 + 180 = 900 Grad
-YELLOW_TOTAL_TURN_ANGLE = 900
+# Gelb dauert jetzt nur noch ca. 3 Sekunden.
+YELLOW_ACTION_TIME = 3000
 
-# 15 Sekunden
-YELLOW_ACTION_TIME = 15000
-
-# 60 Grad/s * 15 s = ungefähr 900 Grad
-YELLOW_TURN_RATE = 60
+# Drehgeschwindigkeit während der Gelb-Aktion.
+# 120 Grad/s * 3 s = ungefähr 360 Grad.
+# Wenn er sich stärker drehen soll, erhöhe den Wert.
+YELLOW_TURN_RATE = 120
 
 # Nach Gelb kurz weiterfahren
 YELLOW_FORWARD_DISTANCE = 100
