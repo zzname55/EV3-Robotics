@@ -1,4 +1,3 @@
-
 # movement.py enthält Bewegungsfunktionen.
 
 from config import (
@@ -26,7 +25,7 @@ def drive_back(robot):
 
 def turn_away(robot):
     """
-    Roboter dreht sich vom Rand oder Hindernis weg.
+    Roboter dreht sich vom Rand weg.
     """
 
     robot.turn(-AVOID_TURN_ANGLE)

@@ -1,4 +1,3 @@
-
 # config.py enthält alle wichtigen Einstellwerte.
 
 
@@ -7,8 +6,8 @@ WHEEL_DIAMETER = 52
 AXLE_TRACK = 116
 
 
-# Geschwindigkeitseinstellungen
-DRIVE_SPEED = 220
+# Normale Geschwindigkeit
+DRIVE_SPEED = 180
 DRIVE_ACCELERATION = 200
 
 TURN_RATE = 90
@@ -19,46 +18,44 @@ TURN_ACCELERATION = 120
 # 200 mm = 20 cm
 OBSTACLE_DISTANCE = 200
 
+# Wenn ein Hindernis erkannt wird, stoppt der Roboter 2 Sekunden.
+OBSTACLE_STOP_TIME = 2000
 
-# Rückfahrstrecke
+
+# Rot-Erkennung
+# Wenn Rot erkannt wird, stoppt der Roboter 10 Sekunden.
+RED_STOP_TIME = 10000
+
+# Danach wird Rot 2 Sekunden nicht mehr geprüft.
+# Der Roboter fährt in dieser Zeit normal weiter.
+RED_IGNORE_TIME = 2000
+
+
+# Rückfahrstrecke im Inside Mode
 BACKUP_DISTANCE = 120
 
 
 # Schwarz-Erkennung
-# Falls Schwarz nicht gut erkannt wird: 20 oder 25 testen.
-BLACK_REFLECTION_LIMIT = 15
+BLACK_REFLECTION_LIMIT = 30
 
 
-# Drehwinkel beim Ausweichen
+# Inside Mode
 AVOID_TURN_ANGLE = 90
 
 
 # Modi
-MODE_INSIDE = 0
-MODE_LINE = 1
+MODE_LINE = 0
+MODE_INSIDE = 1
 
 
-# Rot-Moduswechsel
-MODE_SWITCH_WAIT = 1000
-RED_FORWARD_DISTANCE = 80
+# Line Mode
+LINE_DRIVE_SPEED = 90
 
+LINE_TARGET_REFLECTION = 35
 
-# Linienfolge-Modus
-LINE_DRIVE_SPEED = 120
-LINE_TURN_RATE = 45
+LINE_KP = 1.5
 
-
-# Gelb-Spezial-Aktion
-# Gelb dauert jetzt nur noch ca. 3 Sekunden.
-YELLOW_ACTION_TIME = 3000
-
-# Drehgeschwindigkeit während der Gelb-Aktion.
-# 120 Grad/s * 3 s = ungefähr 360 Grad.
-# Wenn er sich stärker drehen soll, erhöhe den Wert.
-YELLOW_TURN_RATE = 120
-
-# Nach Gelb kurz weiterfahren
-YELLOW_FORWARD_DISTANCE = 100
+LINE_MAX_TURN_RATE = 70
 
 
 # Wartezeiten

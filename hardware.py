@@ -1,4 +1,3 @@
-
 # hardware.py erstellt EV3, Motoren und DriveBase.
 
 from pybricks.hubs import EV3Brick
@@ -14,6 +13,8 @@ ev3 = EV3Brick()
 
 
 # Motoren
+# Linker Motor an Port C
+# Rechter Motor an Port B
 motor_links = Motor(Port.C)
 motor_rechts = Motor(Port.B)
 

@@ -1,25 +1,25 @@
 # behavior.py enthält das Verhalten des Roboters.
 #
-# Modi:
+# Start:
+#   Roboter startet im Line Mode und folgt der schwarzen Linie.
 #
-# MODE_INSIDE:
-#   Roboter bleibt im schwarzen Viereck.
-#
-# MODE_LINE:
-#   Roboter folgt der schwarzen Linie.
+# Rechte EV3-Taste:
+#   Wenn die rechte Taste gedrückt wird,
+#   wechselt der Roboter in den Inside Mode.
 #
 # Rot:
-#   Wechselt zwischen MODE_INSIDE und MODE_LINE.
+#   Wenn Rot erkannt wird:
+#   - Roboter stoppt 10 Sekunden
+#   - danach fährt er sofort weiter
+#   - Rot wird für 2 Sekunden nicht mehr geprüft
 #
-# Gelb:
-#   Roboter dreht sich ca. 3 Sekunden lang.
-#   Währenddessen spielt er eine kurze Melodie.
-#
-# Hindernisse:
-#   Werden in beiden Modi erkannt.
+# Ultraschallsensor:
+#   Wenn ein Hindernis erkannt wird,
+#   stoppt der Roboter 2 Sekunden
+#   und fährt danach weiter.
 
-from pybricks.parameters import Color
-from pybricks.tools import wait
+from pybricks.parameters import Button, Color
+from pybricks.tools import wait, StopWatch
 
 from config import (
     DRIVE_SPEED,
@@ -27,18 +27,18 @@ from config import (
     TURN_RATE,
     TURN_ACCELERATION,
     OBSTACLE_DISTANCE,
+    OBSTACLE_STOP_TIME,
+    RED_STOP_TIME,
+    RED_IGNORE_TIME,
     BLACK_REFLECTION_LIMIT,
     SHORT_WAIT,
     SENSOR_WAIT,
-    MODE_INSIDE,
     MODE_LINE,
-    MODE_SWITCH_WAIT,
-    RED_FORWARD_DISTANCE,
+    MODE_INSIDE,
     LINE_DRIVE_SPEED,
-    LINE_TURN_RATE,
-    YELLOW_ACTION_TIME,
-    YELLOW_TURN_RATE,
-    YELLOW_FORWARD_DISTANCE,
+    LINE_TARGET_REFLECTION,
+    LINE_KP,
+    LINE_MAX_TURN_RATE,
 )
 
 from movement import (
@@ -51,7 +51,7 @@ from movement import (
 
 def black_detected(color_sensor):
     """
-    Prüft, ob Schwarz erkannt wurde.
+    Prüft, ob der Sensor Schwarz oder eine dunkle Fläche erkennt.
     """
 
     return color_sensor.reflection() <= BLACK_REFLECTION_LIMIT
@@ -60,115 +60,65 @@ def black_detected(color_sensor):
 def red_detected(color_sensor):
     """
     Prüft, ob Rot erkannt wurde.
-    Rot wechselt den Modus.
+
+    Wichtig:
+    Diese Funktion wird nur aufgerufen, wenn Rot gerade nicht ignoriert wird.
     """
 
     return color_sensor.color() == Color.RED
 
 
-def yellow_detected(color_sensor):
-    """
-    Prüft, ob Gelb erkannt wurde.
-    Gelb startet die Spezial-Aktion.
-    """
-
-    return color_sensor.color() == Color.YELLOW
-
-
 def obstacle_detected(ultrasonic_sensor):
     """
-    Prüft, ob ein Hindernis vorne erkannt wurde.
+    Prüft, ob vorne ein Hindernis erkannt wurde.
     """
 
     return ultrasonic_sensor.distance() <= OBSTACLE_DISTANCE
 
 
+def right_button_pressed(ev3):
+    """
+    Prüft, ob die rechte Taste am EV3 gedrückt wurde.
+    """
+
+    return Button.RIGHT in ev3.buttons.pressed()
+
+
 def handle_obstacle(robot, ev3):
     """
-    Verhalten bei Hindernis:
-    stoppen, piepen, zurückfahren, wegdrehen.
+    Verhalten bei Hindernis.
+
+    Der Roboter stoppt 2 Sekunden und fährt danach weiter.
     """
 
     stop_robot(robot)
     ev3.speaker.beep()
-    wait(SHORT_WAIT)
-
-    drive_back(robot)
-    wait(SHORT_WAIT)
-
-    turn_away(robot)
-    wait(SHORT_WAIT)
+    wait(OBSTACLE_STOP_TIME)
 
 
-def handle_yellow_marker(robot, ev3):
+def handle_red_marker(robot, ev3):
     """
-    Spezial-Aktion bei Gelb.
+    Verhalten bei Rot.
 
-    Ablauf:
-    1. Stoppen
-    2. Ca. 3 Sekunden drehen
-    3. Währenddessen kurze Melodie spielen
-    4. Danach kurz weiterfahren
+    Der Roboter:
+    1. stoppt
+    2. piept
+    3. wartet 10 Sekunden
+    4. fährt danach im normalen Programm weiter
     """
 
     stop_robot(robot)
-    wait(100)
-
-    # Drehung starten.
-    # 0 = nicht vorwärts fahren.
-    # -YELLOW_TURN_RATE = auf der Stelle drehen.
-    robot.drive(0, -YELLOW_TURN_RATE)
-
-    # Kurze eigene Melodie, ca. 3 Sekunden.
-    melody = [
-        (1000, 200),
-        (1200, 200),
-        (1400, 200),
-        (1600, 300),
-        (1400, 200),
-        (1200, 200),
-        (1000, 300),
-        (1300, 200),
-        (1600, 400),
-    ]
-
-    time_played = 0
-
-    for frequency, duration in melody:
-        ev3.speaker.beep(frequency, duration)
-        wait(40)
-
-        time_played = time_played + duration + 40
-
-        if time_played >= YELLOW_ACTION_TIME:
-            break
-
-    # Falls noch etwas Zeit übrig ist, weiter drehen und kurze Töne spielen.
-    while time_played < YELLOW_ACTION_TIME:
-        ev3.speaker.beep(1200, 150)
-        wait(100)
-
-        time_played = time_played + 250
-
-    # Drehung stoppen.
-    stop_robot(robot)
-    wait(SHORT_WAIT)
-
-    # Kurz weiterfahren, damit Gelb verlassen wird.
-    robot.straight(YELLOW_FORWARD_DISTANCE)
-    wait(SHORT_WAIT)
+    ev3.speaker.beep()
+    wait(RED_STOP_TIME)
 
 
 def stay_inside_square_step(robot, color_sensor, ev3):
     """
-    Verhalten im Viereck-Modus.
+    Inside Mode.
 
-    Wenn Schwarz erkannt wird:
-    Der Roboter ist am Rand.
-    Er fährt zurück und dreht weg.
-
-    Wenn kein Schwarz erkannt wird:
-    Der Roboter fährt geradeaus.
+    Der Roboter fährt im hellen Innenbereich.
+    Wenn er Schwarz erkennt, ist er am schwarzen Rand.
+    Dann fährt er zurück und dreht weg.
     """
 
     if black_detected(color_sensor):
@@ -186,51 +136,62 @@ def stay_inside_square_step(robot, color_sensor, ev3):
         drive_forward(robot)
 
 
+def clamp(value, minimum, maximum):
+    """
+    Begrenzt einen Wert auf einen Mindest- und Maximalwert.
+    """
+
+    if value < minimum:
+        return minimum
+
+    if value > maximum:
+        return maximum
+
+    return value
+
+
 def follow_black_line_step(robot, color_sensor):
     """
-    Einfacher Linienfolge-Modus.
+    Line Mode.
 
-    Wenn Schwarz erkannt wird:
-    geradeaus fahren.
-
-    Wenn kein Schwarz erkannt wird:
-    langsam drehen, um Schwarz wiederzufinden.
+    Der Roboter folgt der schwarzen Linie über den Reflexionswert.
+    Farben wie Gelb oder Blau werden hier nicht extra geprüft.
     """
 
-    if black_detected(color_sensor):
-        robot.drive(LINE_DRIVE_SPEED, 0)
-    else:
-        robot.drive(60, -LINE_TURN_RATE)
+    reflection = color_sensor.reflection()
+
+    error = reflection - LINE_TARGET_REFLECTION
+
+    turn_rate = error * LINE_KP
+
+    turn_rate = clamp(
+        turn_rate,
+        -LINE_MAX_TURN_RATE,
+        LINE_MAX_TURN_RATE
+    )
+
+    robot.drive(LINE_DRIVE_SPEED, turn_rate)
 
 
-def switch_mode(current_mode, ev3):
-    """
-    Wechselt zwischen den Modi.
-
-    MODE_INSIDE -> MODE_LINE
-    MODE_LINE   -> MODE_INSIDE
-    """
-
-    ev3.speaker.beep()
-
-    if current_mode == MODE_INSIDE:
-        return MODE_LINE
-
-    return MODE_INSIDE
-
-
-def run_mode_switch_robot(robot, ultrasonic_sensor, color_sensor, ev3):
+def run_robot(robot, ultrasonic_sensor, color_sensor, ev3):
     """
     Hauptprogramm.
 
-    Reihenfolge:
-    1. Gelb prüfen
-    2. Rot prüfen
-    3. Hindernis prüfen
-    4. Aktuellen Modus ausführen
+    Startmodus:
+        MODE_LINE
+
+    Rechte Taste:
+        Wechsel zu MODE_INSIDE
+
+    Rot:
+        Stoppt 10 Sekunden.
+        Danach wird Rot 2 Sekunden nicht geprüft,
+        aber der Roboter fährt direkt weiter.
+
+    Ultraschall:
+        Stoppt bei Hindernis für 2 Sekunden.
     """
 
-    # Geschwindigkeit einstellen
     robot.settings(
         DRIVE_SPEED,
         DRIVE_ACCELERATION,
@@ -238,52 +199,70 @@ def run_mode_switch_robot(robot, ultrasonic_sensor, color_sensor, ev3):
         TURN_ACCELERATION
     )
 
-    # Startmodus
-    mode = MODE_INSIDE
+    # Start: Roboter folgt der schwarzen Linie.
+    mode = MODE_LINE
 
-    # Rot-Sperre:
-    # Verhindert, dass Rot auf derselben Fläche mehrfach schaltet.
-    red_locked = False
+    # Button-Lock:
+    # Verhindert, dass ein langer Tastendruck mehrfach gezählt wird.
+    right_button_locked = False
+
+    # Timer für die Rot-Ignorierzeit.
+    watch = StopWatch()
+
+    # Bis zu dieser Zeit wird Rot nicht geprüft.
+    # 0 bedeutet: Rot wird aktuell normal geprüft.
+    red_ignore_until = 0
 
     while True:
 
-        # Farben lesen
-        yellow_now = yellow_detected(color_sensor)
-        red_now = red_detected(color_sensor)
+        current_time = watch.time()
 
-        # Rot wieder freigeben, wenn der Roboter nicht mehr auf Rot ist.
-        if not red_now:
-            red_locked = False
+        # Prüfen, ob Rot gerade ignoriert werden soll.
+        red_is_ignored = current_time < red_ignore_until
 
-        # Gelb hat höchste Priorität.
-        if yellow_now:
-            handle_yellow_marker(robot, ev3)
+        # Rechte Taste lesen.
+        right_now = right_button_pressed(ev3)
 
-        # Rot wechselt den Modus.
-        elif red_now and not red_locked:
+        # Rot nur scannen, wenn Rot gerade NICHT ignoriert wird.
+        # Dadurch wird bei großen roten Flächen nicht direkt wieder gestoppt.
+        if red_is_ignored:
+            red_now = False
+        else:
+            red_now = red_detected(color_sensor)
+
+        # Wenn Taste losgelassen wird, darf sie später wieder zählen.
+        if not right_now:
+            right_button_locked = False
+
+        # Rechte Taste wechselt in Inside Mode.
+        if right_now and not right_button_locked:
             stop_robot(robot)
-
-            mode = switch_mode(mode, ev3)
-
-            red_locked = True
-
-            wait(MODE_SWITCH_WAIT)
-
-            # Kurz weiterfahren, damit die rote Fläche verlassen wird.
-            robot.straight(RED_FORWARD_DISTANCE)
+            ev3.speaker.beep()
             wait(SHORT_WAIT)
 
-        # Hindernis erkannt.
+            mode = MODE_INSIDE
+            right_button_locked = True
+
+        # Rot erkannt und Rot wird gerade nicht ignoriert.
+        elif red_now:
+            handle_red_marker(robot, ev3)
+
+            # Nach dem 10-Sekunden-Warten:
+            # Rot für 2 Sekunden nicht mehr scannen.
+            # Der Roboter fährt in dieser Zeit normal weiter.
+            red_ignore_until = watch.time() + RED_IGNORE_TIME
+
+        # Ultraschall wirkt in beiden Modi.
         elif obstacle_detected(ultrasonic_sensor):
             handle_obstacle(robot, ev3)
 
-        # Modus 1:
-        # Im schwarzen Viereck bleiben.
+        # Inside Mode:
+        # Roboter bleibt im schwarzen Viereck.
         elif mode == MODE_INSIDE:
             stay_inside_square_step(robot, color_sensor, ev3)
 
-        # Modus 2:
-        # Schwarzer Linie folgen.
+        # Line Mode:
+        # Roboter folgt der schwarzen Linie.
         elif mode == MODE_LINE:
             follow_black_line_step(robot, color_sensor)
 

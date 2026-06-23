@@ -1,4 +1,3 @@
-
 # sensor.py erstellt alle Sensoren.
 
 from pybricks.ev3devices import UltrasonicSensor, ColorSensor
